@@ -24,6 +24,7 @@ func GetTransactionStrings(mtga_log string) []string {
 		if strings.HasPrefix(line, "}") {
 			processing_json = false
 			all_transaction_strings = append(all_transaction_strings, strings.Join(current_str_arr, "\n"))
+			current_str_arr = []string{}
 		}
 	}
 	return all_transaction_strings
@@ -36,6 +37,7 @@ func GetTransactions(mtga_log string) []Transaction {
 		var t Transaction
 		err := json.Unmarshal([]byte(transaction_string), &t)
 		if err != nil {
+			log.Print(transaction_string)
 			log.Fatal(err)
 		}
 		transactions = append(transactions, t)
@@ -46,17 +48,20 @@ func GetTransactions(mtga_log string) []Transaction {
 /*
  * Returns a map of (player, turn) to array of card ids.
  */
-func GetHands(transaction Transactions) map[(int,int)][]int {
+func GetHand(transaction Transaction, player int, turn int) []int {
 	gre_messages := transaction.GreToClientEvent.GreToClientMessages
 
 	for _, gre_message := range gre_messages {
 		turn_info := gre_message.GameStateMessage.TurnInfo
-		if turn_info.TurnNumber == turn {
-			
-			zones := gre_message.GameStateMessage.Zones
-			for _, zone := range zones {
-				if zone.Type == "ZoneType_Hand" && zone.OwnerSeatId == player {
-					return zone.ObjectInstanceIds
+		if turn_info != nil {
+			if turn_info.TurnNumber == turn {
+				zones := gre_message.GameStateMessage.Zones
+				if zones != nil {
+					for _, zone := range *zones {
+						if zone.Type == "ZoneType_Hand" && zone.OwnerSeatId == player {
+							return zone.ObjectInstanceIds
+						}
+					}
 				}
 			}
 		}
@@ -86,11 +91,10 @@ func GetCardData() map[int]Card {
 	return card_data
 } 
 
-func SortTransactionsByGame(transactions []Transaction) map[(string, int)][]Transaction {
-
-}
-
 func main() {
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	//mtga_log, err := os.Open("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
 	mtga_log, err := ioutil.ReadFile("C:\\Users\\joel\\mtgaoutput\\output_log.txt")
 	if err != nil {
@@ -98,8 +102,9 @@ func main() {
 	}
 	card_data := GetCardData()
 	transactions := GetTransactions(string(mtga_log))
-	games := SortTransactionsByGame(transactions)
 	hand := GetHand(transactions[0], 1, 18)
+	game_objects := GetGameObjects(transactions)
+
 	hand_card_names := make([]string, 0, len(hand))
 	for _, card_id := range hand {
 		card, ok := card_data[card_id]

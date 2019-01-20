@@ -12,7 +12,7 @@ type Transaction struct {
 			GameStateMessage struct {
 				Type        string `json:"type"`
 				GameStateID int    `json:"gameStateId"`
-				GameObjects []struct {
+				GameObjects *[]struct {
 					InstanceID       int      `json:"instanceId"`
 					GrpID            int      `json:"grpId"`
 					Type             string   `json:"type"`
@@ -39,8 +39,8 @@ type Transaction struct {
 					Name         int   `json:"name"`
 					Abilities    []int `json:"abilities"`
 					OverlayGrpID int   `json:"overlayGrpId"`
-				} `json:"gameObjects"`
-				TurnInfo    struct {
+				} `json:"gameObjects,omitempty"`
+				TurnInfo    *struct {
 					Phase          string `json:"phase"`
 					Step           string `json:"step"`
 					TurnNumber     int    `json:"turnNumber"`
@@ -49,8 +49,8 @@ type Transaction struct {
 					DecisionPlayer int    `json:"decisionPlayer"`
 					NextPhase      string `json:"nextPhase"`
 					NextStep       string `json:"nextStep"`
-				} `json:"turnInfo"`
-				Annotations []struct {
+				} `json:"turnInfo,omitempty"`
+				Annotations *[]struct {
 					ID          int      `json:"id"`
 					AffectorID  int      `json:"affectorId"`
 					AffectedIds []int    `json:"affectedIds"`
@@ -61,23 +61,23 @@ type Transaction struct {
 						ValueInt32 []int  `json:"valueInt32"`
 					} `json:"details,omitempty"`
 					AllowRedaction bool `json:"allowRedaction,omitempty"`
-				} `json:"annotations"`
+				} `json:"annotations,omitempty"`
 				PrevGameStateID int `json:"prevGameStateId"`
 				Update  string `json:"update"`
-				Actions []struct {
+				Actions *[]struct {
 					SeatID int `json:"seatId"`
 					Action struct {
 						ActionType string `json:"actionType"`
 						InstanceID int    `json:"instanceId"`
 					} `json:"action"`
-				} `json:"actions"`
-				Zones []struct {
+				} `json:"actions,omitempty"`
+				Zones *[]struct {
 					ZoneId int `json:"zoneId"`
 					Type string `json:"type"`
 					Visibility string `json:"visibility"`
 					ObjectInstanceIds []int `json:"objectInstanceIds"`
 					OwnerSeatId int `json:"ownerSeatId"`
-				} `json:"zones"`
+				} `json:"zones,omitempty"`
 			} `json:"gameStateMessage"`
 		} `json:"greToClientMessages"`
 	} `json:"greToClientEvent"`
