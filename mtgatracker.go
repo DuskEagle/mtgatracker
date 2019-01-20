@@ -9,8 +9,8 @@ import (
 	"strconv"
 )
 
-func GetTransactionStrings(mtga_log string) []string {
-	s := strings.Split(mtga_log, "\n")
+func GetTransactionStrings(mtgaLog string) []string {
+	s := strings.Split(mtgaLog, "\n")
 	all_transaction_strings := []string{}
 	current_str_arr := []string{}
 	processing_json := false
@@ -30,14 +30,15 @@ func GetTransactionStrings(mtga_log string) []string {
 	return all_transaction_strings
 }
 
-func GetTransactions(mtga_log string) []Transaction {
-	transaction_strings := GetTransactionStrings(mtga_log)
+func GetTransactions(mtgaLog string) []Transaction {
+	transaction_strings := GetTransactionStrings(mtgaLog)
 	transactions := make([]Transaction, 0, len(transaction_strings))
-	for _, transaction_string := range transaction_strings {
+	for line, transaction_string := range transaction_strings {
 		var t Transaction
 		err := json.Unmarshal([]byte(transaction_string), &t)
 		if err != nil {
-			log.Print(transaction_string)
+			log.Print(fmt.Sprintf("Transaction number: %d", line))
+			log.Print(fmt.Sprintf("Transaction contents: %s", transaction_string))
 			log.Fatal(err)
 		}
 		transactions = append(transactions, t)
@@ -49,13 +50,13 @@ func GetTransactions(mtga_log string) []Transaction {
  * Returns a map of (player, turn) to array of card ids.
  */
 func GetHand(transaction Transaction, player int, turn int) []int {
-	gre_messages := transaction.GreToClientEvent.GreToClientMessages
+	greMessages := transaction.GreToClientEvent.GreToClientMessages
 
-	for _, gre_message := range gre_messages {
-		turn_info := gre_message.GameStateMessage.TurnInfo
-		if turn_info != nil {
-			if turn_info.TurnNumber == turn {
-				zones := gre_message.GameStateMessage.Zones
+	for _, greMessage := range greMessages {
+		turnInfo := greMessage.GameStateMessage.TurnInfo
+		if turnInfo != nil {
+			if turnInfo.TurnNumber == turn {
+				zones := greMessage.GameStateMessage.Zones
 				if zones != nil {
 					for _, zone := range *zones {
 						if zone.Type == "ZoneType_Hand" && zone.OwnerSeatId == player {
@@ -71,48 +72,120 @@ func GetHand(transaction Transaction, player int, turn int) []int {
 }
 
 func GetCardData() map[int]Card {
-	card_data_string, err := ioutil.ReadFile("CardData.json")
+	cardDataString, err := ioutil.ReadFile("CardData.json")
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmp_card_data := map[string]Card{}
-	err = json.Unmarshal(card_data_string, &tmp_card_data)
+	tmpCardData := map[string]Card{}
+	err = json.Unmarshal(cardDataString, &tmpCardData)
 	if err != nil {
 		log.Fatal(err)
 	}
-	card_data := map[int]Card{}
-	for id, _ := range tmp_card_data {
+	cardData := map[int]Card{}
+	for id, _ := range tmpCardData {
 		int_id, err := strconv.Atoi(id)
 		if err != nil {
 			log.Fatal(err)
 		}
-		card_data[int_id] = tmp_card_data[id]
+		cardData[int_id] = tmpCardData[id]
 	}
-	return card_data
+	return cardData
 } 
+
+/*
+ * Returns a mapping of the game object id of a card to the id of a card in the master
+ * MTGA database.
+ */
+func GetGameObjectCards(transactions []Transaction) map[int]int {
+	cardMap := map[int]int{}
+	for _, transaction := range transactions {
+		greMessages := transaction.GreToClientEvent.GreToClientMessages
+		for _, greMessage := range greMessages {
+			gameObjects := greMessage.GameStateMessage.GameObjects
+			if gameObjects != nil {
+				for _, gameObject := range *gameObjects {
+					if gameObject.Type == "GameObjectType_Card" {
+						cardMap[gameObject.InstanceId] = gameObject.GrpId
+					}
+				} 
+			}
+		}
+	}
+	return cardMap
+}
+
+/*
+ * Get the winner's seat Id
+ */
+func GetWinner(transactions []Transaction) int {
+	for _, transaction := range transactions {
+		greMessages := transaction.GreToClientEvent.GreToClientMessages
+		for _, greMessage := range greMessages {
+			gameInfo := greMessage.GameStateMessage.GameInfo
+			if gameInfo != nil {
+				results := gameInfo.Results
+				for _, result := range results {
+					if result.Result == "ResultType_WinLoss" {
+						return result.WinningTeamId
+					}
+				}
+			}
+		}
+	}
+	log.Fatal("No winner found")
+	return 0
+}
+
+/*
+ * Returns a map of seatId to player names
+ */
+func GetPlayerSeats(transactions []Transaction) map[int]string {
+	seatMap := map[int]string{}
+	for _, transaction := range transactions {
+		gameRoom := transaction.MatchGameRoomStateChangedEvent
+		if gameRoom != nil {
+			players := gameRoom.GameRoomInfo.GameRoomConfig.ReservedPlayers
+			for _, player := range players {
+				seatMap[player.SystemSeatId] = player.PlayerName
+			} 
+		}
+	}
+	return seatMap
+}
 
 func main() {
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	userName := "Jolteon#55824"
 
-	//mtga_log, err := os.Open("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
-	mtga_log, err := ioutil.ReadFile("C:\\Users\\joel\\mtgaoutput\\output_log.txt")
+	//mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
+	mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\mtgaoutput\\output_log.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
-	card_data := GetCardData()
-	transactions := GetTransactions(string(mtga_log))
-	hand := GetHand(transactions[0], 1, 18)
-	game_objects := GetGameObjects(transactions)
-
-	hand_card_names := make([]string, 0, len(hand))
-	for _, card_id := range hand {
-		card, ok := card_data[card_id]
+	cardData := GetCardData()
+	transactions := GetTransactions(string(mtgaLog))
+	hand := GetHand(transactions[1], 1, 18)
+	gameObjectCards := GetGameObjectCards(transactions)
+	playerSeats := GetPlayerSeats(transactions)
+	winner := GetWinner(transactions)
+	
+	handCardNames := make([]string, 0, len(hand))
+	for _, cardId := range hand {
+		gameObjectCardId := gameObjectCards[cardId]
+		card, ok := cardData[gameObjectCardId]
 		if !ok {
-			log.Fatal("Card with ID " + strconv.Itoa(card_id) + " not found in card data.")
+			log.Fatal("Card with game ID " + strconv.Itoa(cardId) + " and MTGA ID " + strconv.Itoa(gameObjectCardId) + " not found in card data.")
 		}
-		hand_card_names = append(hand_card_names, card.Name)
+		handCardNames = append(handCardNames, card.Name)
 	}
 
-	fmt.Println(hand_card_names)
+	wonOrLost := ""
+	if playerSeats[winner] == userName {
+		wonOrLost = "won"
+	} else {
+		wonOrLost = "lost"
+	}
+	fmt.Println("You " + wonOrLost + " with cards \"" + strings.Join(handCardNames, "\", \"") + "\".")
+
 }

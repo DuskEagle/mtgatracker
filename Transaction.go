@@ -1,25 +1,25 @@
 package main
 
 type Transaction struct {
-	TransactionID    string `json:"transactionId"`
+	TransactionId    string `json:"transactionId"`
 	Timestamp        string `json:"timestamp"`
 	GreToClientEvent struct {
 		GreToClientMessages []struct {
 			Type             string `json:"type"`
 			SystemSeatIds    []int  `json:"systemSeatIds"`
-			MsgID            int    `json:"msgId"`
-			GameStateID      int    `json:"gameStateId"`
+			MsgId            int    `json:"msgId"`
+			GameStateId      int    `json:"gameStateId"`
 			GameStateMessage struct {
 				Type        string `json:"type"`
-				GameStateID int    `json:"gameStateId"`
+				GameStateId int    `json:"gameStateId"`
 				GameObjects *[]struct {
-					InstanceID       int      `json:"instanceId"`
-					GrpID            int      `json:"grpId"`
+					InstanceId       int      `json:"instanceId"`
+					GrpId            int      `json:"grpId"`
 					Type             string   `json:"type"`
-					ZoneID           int      `json:"zoneId"`
+					ZoneId           int      `json:"zoneId"`
 					Visibility       string   `json:"visibility"`
-					OwnerSeatID      int      `json:"ownerSeatId"`
-					ControllerSeatID int      `json:"controllerSeatId"`
+					OwnerSeatId      int      `json:"ownerSeatId"`
+					ControllerSeatId int      `json:"controllerSeatId"`
 					CardTypes        []string `json:"cardTypes"`
 					Subtypes         []string `json:"subtypes"`
 					Color            []string `json:"color"`
@@ -33,12 +33,12 @@ type Transaction struct {
 					AttackState string `json:"attackState"`
 					BlockState  string `json:"blockState"`
 					AttackInfo  struct {
-						TargetID      int  `json:"targetId"`
+						TargetId      int  `json:"targetId"`
 						DamageOrdered bool `json:"damageOrdered"`
 					} `json:"attackInfo"`
 					Name         int   `json:"name"`
 					Abilities    []int `json:"abilities"`
-					OverlayGrpID int   `json:"overlayGrpId"`
+					OverlayGrpId int   `json:"overlayGrpId"`
 				} `json:"gameObjects,omitempty"`
 				TurnInfo    *struct {
 					Phase          string `json:"phase"`
@@ -50,9 +50,29 @@ type Transaction struct {
 					NextPhase      string `json:"nextPhase"`
 					NextStep       string `json:"nextStep"`
 				} `json:"turnInfo,omitempty"`
+				GameInfo    *struct {
+					MatchId            string `json:"matchID"`
+					GameNumber         int    `json:"gameNumber"`
+					Stage              string `json:"stage"`
+					Type               string `json:"type"`
+					Variant            string `json:"variant"`
+					MatchState         string `json:"matchState"`
+					MatchWinCondition  string `json:"matchWinCondition"`
+					MaxTimeoutCount    int    `json:"maxTimeoutCount"`
+					MaxPipCount        int    `json:"maxPipCount"`
+					TimeoutDurationSec int    `json:"timeoutDurationSec"`
+					Results            []struct {
+						Scope         string `json:"scope"`
+						Result        string `json:"result"`
+						WinningTeamId int    `json:"winningTeamId"`
+						Reason        string `json:"reason"`
+					} `json:"results"`
+					SuperFormat  string `json:"superFormat"`
+					MulliganType string `json:"mulliganType"`
+				} `json:"gameInfo"`
 				Annotations *[]struct {
-					ID          int      `json:"id"`
-					AffectorID  int      `json:"affectorId"`
+					Id          int      `json:"id"`
+					AffectorId  int      `json:"affectorId"`
 					AffectedIds []int    `json:"affectedIds"`
 					Type        []string `json:"type"`
 					Details     []struct {
@@ -62,13 +82,13 @@ type Transaction struct {
 					} `json:"details,omitempty"`
 					AllowRedaction bool `json:"allowRedaction,omitempty"`
 				} `json:"annotations,omitempty"`
-				PrevGameStateID int `json:"prevGameStateId"`
+				PrevGameStateId int `json:"prevGameStateId"`
 				Update  string `json:"update"`
 				Actions *[]struct {
-					SeatID int `json:"seatId"`
+					SeatId int `json:"seatId"`
 					Action struct {
 						ActionType string `json:"actionType"`
-						InstanceID int    `json:"instanceId"`
+						InstanceId int    `json:"instanceId"`
 					} `json:"action"`
 				} `json:"actions,omitempty"`
 				Zones *[]struct {
@@ -81,4 +101,26 @@ type Transaction struct {
 			} `json:"gameStateMessage"`
 		} `json:"greToClientMessages"`
 	} `json:"greToClientEvent"`
+	MatchGameRoomStateChangedEvent *struct {
+	    GameRoomInfo struct {
+	      	GameRoomConfig struct {
+		        EventId         string `json:"eventId"`
+		        ReservedPlayers []struct {
+		      		UserId         string `json:"userId"`
+		      		PlayerName     string `json:"playerName"`
+		      		SystemSeatId   int    `json:"systemSeatId"`
+		      		TeamId         int    `json:"teamId"`
+		      		ConnectionInfo struct {
+		        		ConnectionState string `json:"connectionState"`
+		    		} `json:"connectionInfo"`
+		        	CourseID string `json:"courseId"`
+		        } `json:"reservedPlayers"`
+		        MatchId     string `json:"matchId"`
+		      	Players   []struct {
+		    		UserId       string `json:"userId"`
+		    		SystemSeatId int    `json:"systemSeatId"`
+		  		} `json:"players"`
+	  		} `json:"gameRoomConfig"`
+    	} `json:"gameRoomInfo"`
+  	} `json:"matchGameRoomStateChangedEvent"`
 }
