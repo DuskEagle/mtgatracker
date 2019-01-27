@@ -12,20 +12,25 @@ import (
 func GetTransactionStrings(mtgaLog string) []string {
 	s := strings.Split(mtgaLog, "\n")
 	all_transaction_strings := []string{}
-	current_str_arr := []string{}
+	current_str_arr := []rune{}
 	processing_json := false
+	brace_count := 0
 	for _, line := range s {
-		if strings.HasPrefix(line, "{") {
-			processing_json = true
-		} 
-		if processing_json {
-			current_str_arr = append(current_str_arr, line)
-		}
-		if strings.HasPrefix(line, "}") {
+		for _, char := range line {
+			if char == '{' {
+				brace_count += 1
+				processing_json = true
+			} 
 			if processing_json {
-				processing_json = false
-				all_transaction_strings = append(all_transaction_strings, strings.Join(current_str_arr, "\n"))
-				current_str_arr = []string{}
+				current_str_arr = append(current_str_arr, char)
+			}
+			if char == '}' {
+				brace_count -= 1
+				if brace_count == 0 {
+					processing_json = false
+					all_transaction_strings = append(all_transaction_strings, string(current_str_arr))
+					current_str_arr = []rune{}
+				}
 			}
 		}
 	}
@@ -153,10 +158,12 @@ func GetPlayerSeats(transaction Transaction) (map[int]string, bool) {
 	gameRoom := transaction.MatchGameRoomStateChangedEvent
 	if gameRoom != nil {
 		players := gameRoom.GameRoomInfo.GameRoomConfig.ReservedPlayers
-		for _, player := range players {
-			seatMap[player.SystemSeatId] = player.PlayerName
+		if players != nil {
+			for _, player := range players {
+				seatMap[player.SystemSeatId] = player.PlayerName
+			}
+			return seatMap, true
 		}
-		return seatMap, true
 	}
 	return nil, false
 }
@@ -184,14 +191,14 @@ func PrintWinner(userName string, playerSeats map[int]string, winner int, handCa
 	fmt.Println("You " + wonOrLost + " with cards \"" + strings.Join(handCardNames, "\", \"") + "\".")
 }
 
-func GetGames(transactions []Transaction, cardData map[int]Card, userName string) (string, []string) {
+func GetGames(transactions []Transaction, cardData map[int]Card, userName string) []GameResult {
 	playerSeats := map[int]string{}
 	userPlayerSeat := 0
 	turn := 0
 	hand := map[int]struct{}{}
 	gameObjectCards := map[int]int{}
 
-	for _, transaction := range transactions {
+	for i, transaction := range transactions {
 		newPlayerSeats, playerSeatsOk := GetPlayerSeats(transaction)
 		newTurn, turnOk := GetTurn(transaction)
 		newHand, handOk := GetHands(transaction)
@@ -206,7 +213,7 @@ func GetGames(transactions []Transaction, cardData map[int]Card, userName string
 				}
 			}
 			if userPlayerSeat == 0 {
-				log.Fatal("Could not find userName's player ID")
+				log.Fatal(fmt.Sprintf("Could not find userName's player ID while handling transaction ID %s", transaction.TransactionId))
 			}
 		}
 		if turnOk {
@@ -235,10 +242,10 @@ func GetGames(transactions []Transaction, cardData map[int]Card, userName string
 				handArray = append(handArray, k)
 			}
 			handCardNames := HandToCardNames(handArray, cardData, gameObjectCards)
-			return wonOrLost, handCardNames //+ GetGames(transactions[i+1:], cardData, userName)
+			return append(GetGames(transactions[i+1:], cardData, userName), GameResult{Result: wonOrLost, Hand: handCardNames})
 		}
 	}
-	return "", nil
+	return []GameResult{}
 }
 
 func main() {
@@ -246,8 +253,8 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	userName := "Jolteon#55824"
 
-	//mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
-	mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\mtgaoutput\\output_log2.txt")
+	mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
+	//mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\mtgaoutput\\output_log2.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -255,6 +262,12 @@ func main() {
 	cardData := GetCardData()
 	transactions := GetTransactions(string(mtgaLog))
 
-	fmt.Println(GetGames(transactions, cardData, userName))
-
+	games := GetGames(transactions, cardData, userName)
+	for _, game := range games {
+		gr, err := json.Marshal(game)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(gr))
+	}
 }
