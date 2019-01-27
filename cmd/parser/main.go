@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"encoding/json"
@@ -253,8 +253,8 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	userName := "Jolteon#55824"
 
-	mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
-	//mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\mtgaoutput\\output_log2.txt")
+	//mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt")
+	mtgaLog, err := ioutil.ReadFile("C:\\Users\\joel\\output_log.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -263,6 +263,7 @@ func main() {
 	transactions := GetTransactions(string(mtgaLog))
 
 	games := GetGames(transactions, cardData, userName)
+	log.Println(len(games))
 	for _, game := range games {
 		gr, err := json.Marshal(game)
 		if err != nil {

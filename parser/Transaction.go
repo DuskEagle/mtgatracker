@@ -1,4 +1,4 @@
-package main
+package parser
 
 type Transaction struct {
 	TransactionId    string `json:"transactionId"`

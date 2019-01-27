@@ -1,4 +1,4 @@
-package main
+package parser
 
 type Card struct {
 	Name   string `json:"name"`
