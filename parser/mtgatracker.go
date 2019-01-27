@@ -1,11 +1,10 @@
-package main
+package parser
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	. "mtgatracker/parser"
 	"strings"
 	"strconv"
 )
@@ -263,6 +262,7 @@ func main() {
 	transactions := GetTransactions(string(mtgaLog))
 
 	games := GetGames(transactions, cardData, userName)
+	log.Println(len(games))
 	for _, game := range games {
 		gr, err := json.Marshal(game)
 		if err != nil {
